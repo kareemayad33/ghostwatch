@@ -1,0 +1,169 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── GhostWatch Design System ─────────────────────────────────────────── */
+/* Theme: Dark slate + amber/orange accent — job seeker frustration energy  */
+/* "The silence says everything" — moody, authoritative, no-nonsense        */
+
+@layer base {
+  :root {
+    /* Surfaces — cool dark slate in light mode: near-white with blue-gray tint */
+    --background: 220 14% 96%;
+    --foreground: 220 20% 12%;
+
+    --card: 220 13% 99%;
+    --card-foreground: 220 20% 12%;
+
+    --popover: 220 13% 99%;
+    --popover-foreground: 220 20% 12%;
+
+    /* Primary accent: burnt amber/orange — urgency, warning, "you've been ghosted" */
+    --primary: 22 90% 42%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 10% 90%;
+    --secondary-foreground: 220 20% 20%;
+
+    --muted: 220 10% 92%;
+    --muted-foreground: 220 10% 48%;
+
+    --accent: 22 85% 48%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 3 72% 44%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 12% 86%;
+    --input: 220 12% 86%;
+    --ring: 22 90% 42%;
+
+    --radius: 0.5rem;
+
+    /* Sidebar */
+    --sidebar-background: 220 18% 93%;
+    --sidebar-foreground: 220 20% 20%;
+    --sidebar-primary: 22 90% 42%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 12% 88%;
+    --sidebar-accent-foreground: 220 20% 20%;
+    --sidebar-border: 220 12% 84%;
+    --sidebar-ring: 22 90% 42%;
+
+    /* Ghost score colors */
+    --score-1: 142 60% 40%;
+    --score-2: 90 55% 42%;
+    --score-3: 40 85% 45%;
+    --score-4: 22 85% 45%;
+    --score-5: 3 72% 44%;
+  }
+
+  .dark {
+    --background: 222 18% 9%;
+    --foreground: 220 10% 88%;
+
+    --card: 222 16% 12%;
+    --card-foreground: 220 10% 88%;
+
+    --popover: 222 16% 12%;
+    --popover-foreground: 220 10% 88%;
+
+    --primary: 28 92% 54%;
+    --primary-foreground: 222 18% 8%;
+
+    --secondary: 222 14% 18%;
+    --secondary-foreground: 220 10% 80%;
+
+    --muted: 222 14% 16%;
+    --muted-foreground: 220 8% 52%;
+
+    --accent: 28 88% 52%;
+    --accent-foreground: 222 18% 8%;
+
+    --destructive: 3 62% 54%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 222 14% 20%;
+    --input: 222 14% 20%;
+    --ring: 28 92% 54%;
+
+    --sidebar-background: 222 18% 7%;
+    --sidebar-foreground: 220 10% 80%;
+    --sidebar-primary: 28 92% 54%;
+    --sidebar-primary-foreground: 222 18% 8%;
+    --sidebar-accent: 222 14% 15%;
+    --sidebar-accent-foreground: 220 10% 75%;
+    --sidebar-border: 222 14% 16%;
+    --sidebar-ring: 28 92% 54%;
+
+    --score-1: 142 55% 50%;
+    --score-2: 90 50% 52%;
+    --score-3: 40 80% 55%;
+    --score-4: 22 82% 58%;
+    --score-5: 3 68% 58%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+    scroll-padding-top: 4rem;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    min-height: 100dvh;
+    line-height: 1.6;
+    font-family: 'Satoshi', 'Inter', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    text-wrap: balance;
+    line-height: 1.2;
+  }
+
+  p, li { text-wrap: pretty; }
+}
+
+@layer utilities {
+  .hover-elevate {
+    transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .hover-elevate:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px hsl(var(--foreground) / 0.08);
+  }
+  .active-elevate-2:active {
+    transform: scale(0.98);
+  }
+  .no-default-active-elevate:active {
+    transform: none;
+  }
+  .toggle-elevate { transition: transform 160ms ease, box-shadow 160ms ease; }
+  .toggle-elevated { transform: translateY(-1px); box-shadow: 0 4px 12px hsl(var(--foreground) / 0.1); }
+
+  /* Ghost score badge colors */
+  .score-bg-1 { background: hsl(var(--score-1) / 0.15); color: hsl(var(--score-1)); border-color: hsl(var(--score-1) / 0.3); }
+  .score-bg-2 { background: hsl(var(--score-2) / 0.15); color: hsl(var(--score-2)); border-color: hsl(var(--score-2) / 0.3); }
+  .score-bg-3 { background: hsl(var(--score-3) / 0.15); color: hsl(var(--score-3)); border-color: hsl(var(--score-3) / 0.3); }
+  .score-bg-4 { background: hsl(var(--score-4) / 0.15); color: hsl(var(--score-4)); border-color: hsl(var(--score-4) / 0.3); }
+  .score-bg-5 { background: hsl(var(--score-5) / 0.15); color: hsl(var(--score-5)); border-color: hsl(var(--score-5) / 0.3); }
+
+  .shimmer {
+    background: linear-gradient(90deg, hsl(var(--muted)) 25%, hsl(var(--border)) 50%, hsl(var(--muted)) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+}
