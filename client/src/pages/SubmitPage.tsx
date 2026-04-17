@@ -152,12 +152,20 @@ export default function SubmitPage() {
         <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-6">
           <CheckCircle className="w-8 h-8 text-green-500" />
         </div>
-        <h1 className="text-xl font-bold text-foreground mb-2">Report Submitted</h1>
-        <p className="text-muted-foreground text-sm mb-8">
-          Your experience is under review and will appear on the feed once approved. Thank you for helping other job seekers.
+        <h1 className="text-xl font-bold text-foreground mb-3">Thank You — Your Voice Matters</h1>
+        <p className="text-foreground text-sm font-medium mb-2">
+          Your report is incredibly valuable to our community.
         </p>
+        <p className="text-muted-foreground text-sm mb-6 leading-relaxed">
+          We're reviewing it for accuracy to make sure every report on GhostWatch is credible and fair. Once approved, it will be published to the feed and help protect other job seekers from the same experience.
+        </p>
+        <div className="rounded-xl bg-primary/5 border border-primary/20 px-5 py-4 mb-8 text-left">
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            <span className="font-semibold text-foreground">What happens next:</span> Our moderation team typically reviews submissions within 24 hours. You put in the hard work — the least we can do is make sure your story gets heard.
+          </p>
+        </div>
         <div className="flex gap-3 justify-center flex-wrap">
-          <Button variant="outline" onClick={() => { setSubmitted(false); form.reset(); }} data-testid="submit-another">
+          <Button variant="outline" onClick={() => { setSubmitted(false); form.reset(); setAttachments([]); }} data-testid="submit-another">
             Submit Another
           </Button>
           <Link href="/">
