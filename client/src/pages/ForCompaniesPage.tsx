@@ -1,4 +1,6 @@
 import { Link } from "wouter";
+import { useState } from "react";
+import WaitlistModal from "@/components/WaitlistModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -44,7 +46,11 @@ const STEPS = [
 ];
 
 export default function ForCompaniesPage() {
+  const [showModal, setShowModal] = useState(false);
   return (
+    <>
+    {showModal && <WaitlistModal plan="company" onClose={() => setShowModal(false)} />}
+    <div>
     <div className="max-w-5xl mx-auto px-4 py-12">
       {/* Hero */}
       <div className="text-center mb-14">
@@ -58,7 +64,7 @@ export default function ForCompaniesPage() {
           Thousands of candidates check GhostWatch before applying. Companies on our paid plan can monitor their score, respond to reports, and show candidates they've improved.
         </p>
         <div className="flex items-center justify-center gap-3 mt-6">
-          <Button data-testid="companies-demo-cta" className="gap-2">
+          <Button data-testid="companies-demo-cta" className="gap-2" onClick={() => setShowModal(true)}>
             <Building2 className="w-4 h-4" />
             Request a demo
           </Button>
@@ -120,7 +126,7 @@ export default function ForCompaniesPage() {
         <p className="text-sm text-muted-foreground text-center mb-6">We'll reach out within 1 business day.</p>
         <form
           className="space-y-4"
-          onSubmit={e => { e.preventDefault(); alert("Thanks! We'll be in touch shortly."); }}
+          onSubmit={e => { e.preventDefault(); setShowModal(true); }}
         >
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -181,5 +187,7 @@ export default function ForCompaniesPage() {
         </form>
       </div>
     </div>
+    </div>
+    </>
   );
 }

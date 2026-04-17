@@ -1,12 +1,12 @@
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
-import { reports, type InsertReport, type Report } from "@shared/schema";
-import { eq, desc, and, like, sql } from "drizzle-orm";
+import { reports, waitlist, type InsertReport, type Report, type InsertWaitlist, type Waitlist } from "@shared/schema";
+import { eq, desc } from "drizzle-orm";
 
 const sqlite = new Database("ghostwatch.db");
 const db = drizzle(sqlite);
 
-// Create table if not exists
+// Create tables if not exists
 sqlite.exec(`
   CREATE TABLE IF NOT EXISTS reports (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -27,11 +27,20 @@ sqlite.exec(`
   )
 `);
 
+sqlite.exec(`
+  CREATE TABLE IF NOT EXISTS waitlist (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL UNIQUE,
+    plan TEXT NOT NULL DEFAULT 'pro',
+    created_at INTEGER
+  )
+`);
+
 // Seed with realistic sample data if empty
 const count = sqlite.prepare("SELECT COUNT(*) as c FROM reports").get() as { c: number };
 if (count.c === 0) {
   const now = Math.floor(Date.now() / 1000);
-  const dayMs = 86400; // seconds
+  const dayMs = 86400;
   const samples = [
     { company_name: "Meta", recruiter_name: "Sarah T.", job_title: "Senior Product Manager", city: "Menlo Park", state: "CA", country: "US", ghost_stage: "After final round", wait_days: 28, ghost_score: 5, description: "Completed 6 rounds including a case study presentation. Recruiter went silent after saying 'we'll have a decision by Friday.' Followed up 4 times over 4 weeks. No response ever came.", submitter_email: null, status: "approved", created_at: now - 3 * dayMs },
     { company_name: "Amazon", recruiter_name: null, job_title: "Operations Manager", city: "Seattle", state: "WA", country: "US", ghost_stage: "After phone screen", wait_days: 14, ghost_score: 3, description: "Had a great 45-minute call. Recruiter said they'd send over next steps within 3 business days. Two weeks later, nothing. Emailed twice, no reply.", submitter_email: null, status: "approved", created_at: now - 7 * dayMs },
@@ -53,17 +62,12 @@ if (count.c === 0) {
 }
 
 export interface IStorage {
-  // Public feed
   getApprovedReports(filters: { state?: string; city?: string; company?: string }): Report[];
   getReport(id: number): Report | undefined;
   createReport(data: InsertReport): Report;
-
-  // Aggregates
   getCompanyStats(): { companyName: string; avgScore: number; reportCount: number; worstStage: string }[];
-  getLocationStats(): { state: string; count: number }[];
+  getLocationStats(): { state: string; count: number; avgScore: number }[];
   getStats(): { total: number; avgScore: number; avgWaitDays: number; topGhosted: string };
-
-  // Awards
   getAwards(): {
     week: { companyName: string; reportCount: number; avgScore: number } | null;
     month: { companyName: string; reportCount: number; avgScore: number } | null;
@@ -71,16 +75,15 @@ export interface IStorage {
     allTime: { companyName: string; reportCount: number; avgScore: number } | null;
     hallOfShame: { companyName: string; reportCount: number; avgScore: number; worstStage: string; avgWaitDays: number }[];
   };
-
-  // Moderation
   getPendingReports(): Report[];
   updateReportStatus(id: number, status: "approved" | "rejected"): Report | undefined;
+  // Waitlist
+  addToWaitlist(data: InsertWaitlist): { success: boolean; alreadyExists: boolean };
+  getWaitlist(): Waitlist[];
 }
 
 export const storage: IStorage = {
   getApprovedReports({ state, city, company } = {}) {
-    let query = db.select().from(reports).where(eq(reports.status, "approved"));
-    // We'll filter in JS since drizzle sqlite chaining is tricky
     let all = db.select().from(reports).where(eq(reports.status, "approved")).orderBy(desc(reports.createdAt)).all();
     if (state) all = all.filter(r => r.state.toLowerCase() === state.toLowerCase());
     if (city) all = all.filter(r => r.city.toLowerCase().includes(city.toLowerCase()));
@@ -94,36 +97,35 @@ export const storage: IStorage = {
 
   createReport(data) {
     const now = new Date();
-    const row = db.insert(reports).values({ ...data, createdAt: now }).returning().get();
-    return row;
+    return db.insert(reports).values({ ...data, createdAt: now }).returning().get();
   },
 
   getCompanyStats() {
     const all = db.select().from(reports).where(eq(reports.status, "approved")).all();
     const map = new Map<string, { sum: number; count: number; stages: string[] }>();
     for (const r of all) {
-      const existing = map.get(r.companyName) || { sum: 0, count: 0, stages: [] };
-      existing.sum += r.ghostScore;
-      existing.count += 1;
-      existing.stages.push(r.ghostStage);
-      map.set(r.companyName, existing);
+      const e = map.get(r.companyName) || { sum: 0, count: 0, stages: [] };
+      e.sum += r.ghostScore; e.count++; e.stages.push(r.ghostStage);
+      map.set(r.companyName, e);
     }
-    return Array.from(map.entries())
-      .map(([companyName, { sum, count, stages }]) => {
-        const stageCount = stages.reduce<Record<string, number>>((acc, s) => { acc[s] = (acc[s] || 0) + 1; return acc; }, {});
-        const worstStage = Object.entries(stageCount).sort((a, b) => b[1] - a[1])[0]?.[0] || "Unknown";
-        return { companyName, avgScore: Math.round((sum / count) * 10) / 10, reportCount: count, worstStage };
-      })
-      .sort((a, b) => b.avgScore - a.avgScore);
+    return Array.from(map.entries()).map(([companyName, { sum, count, stages }]) => {
+      const sc = stages.reduce<Record<string, number>>((a, s) => { a[s] = (a[s] || 0) + 1; return a; }, {});
+      const worstStage = Object.entries(sc).sort((a, b) => b[1] - a[1])[0]?.[0] || "Unknown";
+      return { companyName, avgScore: Math.round((sum / count) * 10) / 10, reportCount: count, worstStage };
+    }).sort((a, b) => b.avgScore - a.avgScore);
   },
 
   getLocationStats() {
     const all = db.select().from(reports).where(eq(reports.status, "approved")).all();
-    const map = new Map<string, number>();
+    const map = new Map<string, { count: number; sum: number }>();
     for (const r of all) {
-      map.set(r.state, (map.get(r.state) || 0) + 1);
+      const e = map.get(r.state) || { count: 0, sum: 0 };
+      e.count++; e.sum += r.ghostScore;
+      map.set(r.state, e);
     }
-    return Array.from(map.entries()).map(([state, count]) => ({ state, count })).sort((a, b) => b.count - a.count);
+    return Array.from(map.entries())
+      .map(([state, { count, sum }]) => ({ state, count, avgScore: Math.round((sum / count) * 10) / 10 }))
+      .sort((a, b) => b.count - a.count);
   },
 
   getStats() {
@@ -155,36 +157,25 @@ export const storage: IStorage = {
         e.sum += r.ghostScore; e.count++;
         map.set(r.companyName, e);
       }
-      // rank by count first, then avg score
       const ranked = Array.from(map.entries())
         .map(([companyName, { sum, count }]) => ({ companyName, reportCount: count, avgScore: Math.round((sum / count) * 10) / 10 }))
         .sort((a, b) => b.reportCount - a.reportCount || b.avgScore - a.avgScore);
       return ranked[0] || null;
     }
 
-    // Hall of shame: all-time top 5 by report count + avg score combined
     const map = new Map<string, { sum: number; count: number; stages: string[]; waitSum: number }>();
     for (const r of all) {
       const e = map.get(r.companyName) || { sum: 0, count: 0, stages: [], waitSum: 0 };
       e.sum += r.ghostScore; e.count++; e.stages.push(r.ghostStage); e.waitSum += r.waitDays;
       map.set(r.companyName, e);
     }
-    const hallOfShame = Array.from(map.entries())
-      .map(([companyName, { sum, count, stages, waitSum }]) => {
-        const stageCounts = stages.reduce<Record<string, number>>((a, s) => { a[s] = (a[s] || 0) + 1; return a; }, {});
-        const worstStage = Object.entries(stageCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "Unknown";
-        return { companyName, reportCount: count, avgScore: Math.round((sum / count) * 10) / 10, worstStage, avgWaitDays: Math.round(waitSum / count) };
-      })
-      .sort((a, b) => b.reportCount - a.reportCount || b.avgScore - a.avgScore)
-      .slice(0, 5);
+    const hallOfShame = Array.from(map.entries()).map(([companyName, { sum, count, stages, waitSum }]) => {
+      const stageCounts = stages.reduce<Record<string, number>>((a, s) => { a[s] = (a[s] || 0) + 1; return a; }, {});
+      const worstStage = Object.entries(stageCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "Unknown";
+      return { companyName, reportCount: count, avgScore: Math.round((sum / count) * 10) / 10, worstStage, avgWaitDays: Math.round(waitSum / count) };
+    }).sort((a, b) => b.reportCount - a.reportCount || b.avgScore - a.avgScore).slice(0, 5);
 
-    return {
-      week:  topByPeriod(weekAgo),
-      month: topByPeriod(monthAgo),
-      year:  topByPeriod(yearAgo),
-      allTime: hallOfShame[0] || null,
-      hallOfShame,
-    };
+    return { week: topByPeriod(weekAgo), month: topByPeriod(monthAgo), year: topByPeriod(yearAgo), allTime: hallOfShame[0] || null, hallOfShame };
   },
 
   getPendingReports() {
@@ -193,5 +184,19 @@ export const storage: IStorage = {
 
   updateReportStatus(id, status) {
     return db.update(reports).set({ status }).where(eq(reports.id, id)).returning().get();
+  },
+
+  addToWaitlist(data) {
+    try {
+      db.insert(waitlist).values({ ...data, createdAt: new Date() }).run();
+      return { success: true, alreadyExists: false };
+    } catch (e: any) {
+      if (e?.message?.includes("UNIQUE")) return { success: true, alreadyExists: true };
+      throw e;
+    }
+  },
+
+  getWaitlist() {
+    return db.select().from(waitlist).orderBy(desc(waitlist.createdAt)).all();
   },
 };

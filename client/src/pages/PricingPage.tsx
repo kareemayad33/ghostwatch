@@ -1,4 +1,6 @@
 import { Link } from "wouter";
+import { useState } from "react";
+import WaitlistModal from "@/components/WaitlistModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -32,7 +34,11 @@ const FREE_FEATURES = [
 ];
 
 export default function PricingPage() {
+  const [modal, setModal] = useState<"pro" | "company" | null>(null);
   return (
+    <>
+    {modal && <WaitlistModal plan={modal} onClose={() => setModal(null)} />}
+    <div>
     <div className="max-w-5xl mx-auto px-4 py-12">
       {/* Header */}
       <div className="text-center mb-12">
@@ -102,8 +108,8 @@ export default function PricingPage() {
             <p className="text-xs text-muted-foreground mt-1">For active job seekers who want an edge.</p>
           </CardHeader>
           <CardContent className="px-6 pb-6">
-            <Button className="w-full mb-5" data-testid="pricing-pro-cta">
-              Start free trial
+            <Button className="w-full mb-5" data-testid="pricing-pro-cta" onClick={() => setModal("pro")}>
+              Join waitlist — coming soon
             </Button>
             <ul className="space-y-2.5">
               {JOB_SEEKER_FEATURES.map(f => (
@@ -133,8 +139,8 @@ export default function PricingPage() {
           </CardHeader>
           <CardContent className="px-6 pb-6">
             <Link href="/for-companies">
-              <Button variant="outline" className="w-full mb-5 border-amber-500/30 hover:bg-amber-500/5 hover:text-amber-600" data-testid="pricing-company-cta">
-                Request a demo
+              <Button variant="outline" className="w-full mb-5 border-amber-500/30 hover:bg-amber-500/5 hover:text-amber-600" data-testid="pricing-company-cta" onClick={() => setModal("company")}>
+                Join waitlist — coming soon
               </Button>
             </Link>
             <ul className="space-y-2.5">
@@ -223,5 +229,7 @@ export default function PricingPage() {
         </div>
       </div>
     </div>
+    </div>
+    </>
   );
 }

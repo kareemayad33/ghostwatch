@@ -96,5 +96,25 @@ export async function registerRoutes(httpServer: Server, app: Express) {
     res.json(updated);
   });
 
+
+  // ── Waitlist ─────────────────────────────────────────────────────────────
+  app.post("/api/waitlist", (req, res) => {
+    const schema = z.object({ email: z.string().email(), plan: z.enum(["pro", "company"]).default("pro") });
+    try {
+      const { email, plan } = schema.parse(req.body);
+      const result = storage.addToWaitlist({ email, plan });
+      res.json(result);
+    } catch (e) {
+      if (e instanceof z.ZodError) return res.status(400).json({ error: "Invalid email" });
+      res.status(500).json({ error: "Failed to join waitlist" });
+    }
+  });
+
+  app.get("/api/admin/waitlist", (req, res) => {
+    const adminKey = req.headers["x-admin-key"];
+    if (adminKey !== "Mayaiman33") return res.status(401).json({ error: "Unauthorized" });
+    res.json(storage.getWaitlist());
+  });
+
   return httpServer;
 }

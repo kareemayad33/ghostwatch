@@ -30,5 +30,17 @@ export const insertReportSchema = createInsertSchema(reports).omit({
 export type InsertReport = z.infer<typeof insertReportSchema>;
 export type Report = typeof reports.$inferSelect;
 
+// ── Waitlist ────────────────────────────────────────────────────────────────
+export const waitlist = sqliteTable("waitlist", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  email: text("email").notNull().unique(),
+  plan: text("plan").notNull().default("pro"), // "pro" | "company"
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+});
+
+export const insertWaitlistSchema = createInsertSchema(waitlist).omit({ id: true, createdAt: true });
+export type InsertWaitlist = z.infer<typeof insertWaitlistSchema>;
+export type Waitlist = typeof waitlist.$inferSelect;
+
 // ── Company aggregate stats (materialized via queries, not a separate table) ─
 // We'll compute these on the fly from approved reports

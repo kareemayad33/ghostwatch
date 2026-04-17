@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { ShieldCheck, CheckCircle, XCircle, Clock, MapPin, Ghost, Lock, Paperclip, FileText, Image, File, Download } from "lucide-react";
+import { ShieldCheck, CheckCircle, XCircle, Clock, MapPin, Ghost, Lock, Paperclip, FileText, Image, File, Download, Mail, Users } from "lucide-react";
+import type { Waitlist } from "@shared/schema";
 import type { Report } from "@shared/schema";
 
 const ADMIN_KEY = "Mayaiman33";
@@ -25,6 +26,17 @@ export default function AdminPage() {
       toast({ title: "Incorrect key", variant: "destructive" });
     }
   };
+
+  const [tab, setTab] = useState<"reports" | "waitlist">("reports");
+
+  const { data: waitlistData } = useQuery<Waitlist[]>({
+    queryKey: ["/api/admin/waitlist"],
+    queryFn: () =>
+      fetch("/api/admin/waitlist", {
+        headers: { "x-admin-key": authKey },
+      }).then(r => r.json()),
+    enabled: authenticated,
+  });
 
   const { data: pending, isLoading } = useQuery<Report[]>({
     queryKey: ["/api/admin/pending"],
@@ -101,15 +113,71 @@ export default function AdminPage() {
             Review submitted reports. Approve to publish, reject to remove.
           </p>
         </div>
-        {pending && (
-          <Badge variant="secondary" className="gap-1.5">
-            <Clock className="w-3.5 h-3.5" />
-            {pending.length} pending
-          </Badge>
-        )}
+        <div className="flex items-center gap-2">
+          {pending && (
+            <Badge variant="secondary" className="gap-1.5">
+              <Clock className="w-3.5 h-3.5" />
+              {pending.length} pending
+            </Badge>
+          )}
+        </div>
       </div>
 
-      {isLoading ? (
+      {/* Tabs */}
+      <div className="flex gap-1 mb-6 bg-muted rounded-lg p-1 w-fit">
+        <button
+          onClick={() => setTab("reports")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${tab === "reports" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+          data-testid="admin-tab-reports"
+        >
+          <Ghost className="w-4 h-4" />
+          Reports
+        </button>
+        <button
+          onClick={() => setTab("waitlist")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${tab === "waitlist" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+          data-testid="admin-tab-waitlist"
+        >
+          <Mail className="w-4 h-4" />
+          Waitlist
+          {waitlistData?.length ? <span className="bg-primary text-primary-foreground text-xs rounded-full px-1.5 py-0.5 leading-none">{waitlistData.length}</span> : null}
+        </button>
+      </div>
+
+      {tab === "waitlist" ? (
+        <div>
+          {!waitlistData?.length ? (
+            <div className="text-center py-16 text-muted-foreground">
+              <Users className="w-10 h-10 mx-auto mb-3 opacity-30" />
+              <p className="text-sm">No waitlist signups yet.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-sm font-semibold text-foreground">{waitlistData.length} signup{waitlistData.length !== 1 ? "s" : ""}</span>
+                <div className="flex gap-3 text-xs text-muted-foreground">
+                  <span>Pro: {waitlistData.filter(w => w.plan === "pro").length}</span>
+                  <span>Company: {waitlistData.filter(w => w.plan === "company").length}</span>
+                </div>
+              </div>
+              {waitlistData.map(w => (
+                <div key={w.id} className="flex items-center justify-between px-4 py-3 bg-card border border-border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Mail className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-foreground">{w.email}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Badge className={w.plan === "company" ? "bg-amber-500/10 text-amber-600 border-amber-500/20" : "bg-primary/10 text-primary border-primary/20"}>
+                      {w.plan === "company" ? "Company" : "Pro"}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">{w.createdAt ? new Date(w.createdAt).toLocaleDateString() : ""}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
             <Card key={i}>
